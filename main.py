@@ -6,6 +6,10 @@ from eden.block import BaseBlock
 from eden.datatypes import Image
 from eden.hosting import host_block
 
+import logging
+
+logging.basicConfig(filename='example.txt', level=logging.DEBUG)
+
 
 eden_block = BaseBlock(max_gpu_mem = 1)
 
@@ -17,6 +21,9 @@ def do_something(config):
 
     question = config['question']
     device = config['__gpu__']
+    
+    logging.debug(config)
+    logging.debug("go")
 
     prompt = '''
     Question: What language is the most useful in Europe and Russia (except English and Russian)? Why?
@@ -30,12 +37,17 @@ def do_something(config):
     Question: How would you explain the essence of Bhagavad Gita?
     Answer: Here is the backdrop. A great warrior who is fighting against injustice is suddenly overcome by sorrow. He had to fight a war against everyone he cared for - his cousins, teacher, uncles, classmates.. Overtaken by emotions, he attempts to give up the war.
 
-    Question: What is the nature of consciousness?
+    Question: '''
+    prompt += question
+    prompt += '''
     Answer:'''
-
-    face_file = 'stylegan_temp.mp4'
-    speech_file = 'speech_temp.wav'
-    output_file = 'final.mp4'
+    
+    
+    token_id = 'temp1'
+    
+    face_file = 'output/{}_sg.mp4'.format(token_id)
+    speech_file = 'output/{}_audio.wav'.format(token_id)
+    output_file = 'output/{}_final.mp4'.format(token_id)
 
 
     response = gpt3.complete(prompt, 
@@ -72,17 +84,18 @@ def do_something(config):
     print("=> finished Wav2Lip video")
 
     return {
-        'question': config['question'],  ## returning text
-        'response': response
+        'question': config['question'], 
+        'response': response,
+        'video': output_file
     }
 
 
 host_block(
     eden_block,
     port = 5656,
-    max_num_workers = 2,
+    max_num_workers = 4,
     redis_port = 6379,
     exclude_gpu_ids = [],
     logfile = 'log.txt',
-    log_level = 'error'
+    log_level = 'debug'
 )
