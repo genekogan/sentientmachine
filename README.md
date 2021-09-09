@@ -1,5 +1,8 @@
 # Sentient Machine
 
+
+client code:
+
 ```
 from eden.client import Client
 from eden.datatypes import Image
