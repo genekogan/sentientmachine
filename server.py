@@ -22,11 +22,11 @@ my_args = {
 }
 @eden_block.run(args = my_args, progress = True)
 def run_sentient_machine(config): 
-
     question = config['question']
     password = config['password']
     device = config.gpu
-
+    gpu = int(device.split(':')[-1])
+    
     if password != SERVER_PASSWORD:
         return {
             'status': 'error', 
@@ -76,7 +76,8 @@ Human: '''
 
     cli.tacotron2(speech_file, 
         response, 
-        as_subprocess=True)
+        as_subprocess=True,
+        gpu=gpu)
 
     w, sr = audio.load(speech_file)
     duration = len(w)/sr
@@ -87,15 +88,17 @@ Human: '''
         duration_sec=duration,
         smoothing_sec=2.0, 
         truncation=1.0, 
-        as_subprocess=True)
+        as_subprocess=True,
+        gpu=gpu)
 
     logging.debug("=> finished StyleGAN video")
 
     cli.wav2lip(output_file,
         face_file, 
         speech_file, 
-        as_subprocess=True)
-    
+        as_subprocess=True,
+        gpu=gpu)
+
     logging.debug("=> finished Wav2Lip video")
     config.progress.update(1)
 
