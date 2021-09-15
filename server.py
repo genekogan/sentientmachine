@@ -95,10 +95,8 @@ Human: '''
         face_file, 
         speech_file, 
         as_subprocess=True)
-
+    
     logging.debug("=> finished Wav2Lip video")
-
-    config.refresh()
     config.progress.update(1)
 
     return {
