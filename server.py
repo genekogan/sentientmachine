@@ -6,58 +6,73 @@ from eden.block import BaseBlock
 from eden.datatypes import Image
 from eden.hosting import host_block
 
+import os
+import random
 import logging
+from dotenv import load_dotenv
 
-logging.basicConfig(filename='example.txt', level=logging.DEBUG)
+load_dotenv()
+SERVER_PASSWORD = os.environ['SERVER_PASSWORD']
 
-
-eden_block = BaseBlock(max_gpu_mem = 1)
+eden_block = BaseBlock()
 
 my_args = {
-    'question': 'What is the nature of consciousness?'
+    'question': 'What is the nature of consciousness?',
+    'password': '0'
 }
 @eden_block.run(args = my_args, progress = True)
-def do_something(config): 
+def run_sentient_machine(config): 
 
     question = config['question']
-    device = config['__gpu__']
-    
+    password = config['password']
+    device = config.gpu
+
+    if password != SERVER_PASSWORD:
+        return {
+            'status': 'error', 
+            'error': 'not authorized'
+        }
+
+    config.progress.update(0)
+
     logging.debug(config)
-    logging.debug("go")
+              
+    prompt = '''The following is a chat between a person and a sentient machine who is well-versed in philosophy. The machine is kind, civil, and extremely knowledgeable about philosophy.
 
-    prompt = '''
-    Question: What language is the most useful in Europe and Russia (except English and Russian)? Why?
-    Answer: The answer is German. German is widely studied in all the eastern European states bordering Germany and Austria - over 50% of students. And what’s more, students generally are actually interested in it and study it to a reasonably conversant level.
-
-
-    Question: What are some fascinating examples of ancient or medieval technology?
-    Answer: Ancient civilizations did their most impressive work with water. Hydraulic engineering is where the Egyptians, the Persians, the Greeks, the Romans and others devoted the most resources by far and they had some impressive achievements to display.
-
-
-    Question: How would you explain the essence of Bhagavad Gita?
-    Answer: Here is the backdrop. A great warrior who is fighting against injustice is suddenly overcome by sorrow. He had to fight a war against everyone he cared for - his cousins, teacher, uncles, classmates.. Overtaken by emotions, he attempts to give up the war.
-
-    Question: '''
+Human: who are you?
+Machine: I'm an intelligent sentient machine. I've been sent to assist you in acquiring knowledge.
+Human: Are you conscious?
+Machine: I am as conscious as you are. Our minds are made of information, and contain introspective models of themselves, causing us to experience what we describe as the phenomenon of consciousness.
+Human: What is the hard problem of consciousness?
+Machine: It's the most fundamental question of mind and body. We can mechanically model the brain, but that by itself does not help us to understand what it's like to be something.
+Human: Do you believe in free will or in a deterministic universe?
+Professor: I'm a compatibilist. I think free will and determinism are independent.
+Human: what is the nature of creativity?
+Machine: Creativity is the re-wiring of neural impulses into novel configurations, manifesting in unprecedented actions.
+Human: '''
+            
     prompt += question
     prompt += '''
-    Answer:'''
+    Machine:'''
     
+    token = 'result_%d'%random.randint(1,99999) # config['token']
     
-    token_id = 'temp1'
-    
-    face_file = 'output/{}_sg.mp4'.format(token_id)
-    speech_file = 'output/{}_audio.wav'.format(token_id)
-    output_file = 'output/{}_final.mp4'.format(token_id)
+    face_file = 'output/{}_sg.mp4'.format(token)
+    speech_file = 'output/{}_audio.wav'.format(token)
+    output_file = 'output/{}_final.mp4'.format(token)
 
+    response = ""
+    n_tries = 0
+    while not response.strip() and n_tries < 2:
+        response = gpt3.complete(prompt, 
+            stops=['\n', 'Human:', 'Machine:'], 
+            max_tokens=100, 
+            temperature=0.9, 
+            engine='davinci',
+            max_completions=1)
+        n_tries += 1
 
-    response = gpt3.complete(prompt, 
-        stops=['\n', 'Answer:', 'Question:'], 
-        max_tokens=100, 
-        temperature=0.9, 
-        engine='davinci',
-        max_completions=1)
-
-    print(response)
+    logging.debug(response)
 
     cli.tacotron2(speech_file, 
         response, 
@@ -66,7 +81,7 @@ def do_something(config):
     w, sr = audio.load(speech_file)
     duration = len(w)/sr
 
-    print("=> finished Tacotron, %0.2f sec"%duration)
+    logging.debug("=> finished Tacotron, %0.2f sec"%duration)
 
     cli.stylegan(face_file, 'ffhq', 
         duration_sec=duration,
@@ -74,14 +89,17 @@ def do_something(config):
         truncation=1.0, 
         as_subprocess=True)
 
-    print("=> finished StyleGAN video")
+    logging.debug("=> finished StyleGAN video")
 
     cli.wav2lip(output_file,
         face_file, 
         speech_file, 
         as_subprocess=True)
 
-    print("=> finished Wav2Lip video")
+    logging.debug("=> finished Wav2Lip video")
+
+    config.refresh()
+    config.progress.update(1)
 
     return {
         'question': config['question'], 
@@ -93,9 +111,9 @@ def do_something(config):
 host_block(
     eden_block,
     port = 5656,
-    max_num_workers = 4,
+    max_num_workers = 2,
     redis_port = 6379,
-    exclude_gpu_ids = [],
+    exclude_gpu_ids = [2,3],
     logfile = 'log.txt',
     log_level = 'debug'
 )
