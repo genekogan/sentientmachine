@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# Eden-specific
+__eden_queue__.json
+log.txt
+output
+results
